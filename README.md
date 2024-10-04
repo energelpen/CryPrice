@@ -11,8 +11,6 @@ CryPrice is a command-line cryptocurrency tool that interacts with Kraken's publ
 - [Installation](#installation)
 - [Contributing](#contributing)
 - [Disclaimer](#disclaimer)
-- [License](#license)
-
 ---
 
 ## Overview
