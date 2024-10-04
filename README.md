@@ -93,9 +93,3 @@ CryPrice is intended for learning purposes only. The authors of this project are
 Please use this tool with caution, especially when making financial decisions, as the data fetched may not always be up-to-date or accurate. **CryPrice and its authors are not responsible for any trading or investment actions you take based on the information provided**.
 
 ---
-
-## License
-
-This project is licensed under the ISC License. See the [LICENSE](LICENSE) file for more details.
-
----
