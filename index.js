@@ -3,7 +3,8 @@ import figlet from 'figlet';
 import { input, select, Separator, confirm } from '@inquirer/prompts';
 import { displayKrakenTimeWithOffset, getServerStatus } from './lib/kraken_timestat.js'; // Import the functions
 import { makeHttpsRequest } from './lib/callingserverwrap.js';
-import { validateAssetString } from './lib/validating.js';
+
+const apiweb = "https://api.kraken.com/0" 
 
 // Generate and display the CryPrice logo
 const logo = figlet.textSync('CryPrice', {
@@ -32,7 +33,7 @@ async function main() {
       {
         name: 'Get Asset Info',
         value: 'assinf',
-        description: 'Here, you can get information about assets and tradable asset pairs'
+        description: 'Here, you can get information about assets'
       },
       {
         name: 'Get Asset Pair Info',
@@ -80,59 +81,106 @@ async function main() {
       console.log(chalk.green('You selected: Get Asset Info'));
   
       async function getAssetInfo() {
-        // Ask the user for the asset type or name
-        const { assetinf } = await inquirer.prompt([
-          {
-            type: 'input',
-            name: 'assetinf',
-            message: 'Please enter the asset type or name:',
-            validate: (input) => validateAssetString(input) || 'Invalid asset input, please try again.'
-          }
-        ]);
-  
         try {
-          // Fetch data from API
-          let response = await fetch(`${apiweb}/public/Assets?asset=` + assetinf);
-          const data = await response.json();
-  
-          if (!response.ok || (data.error && data.error.length)) {
-            throw new Error(data.error?.join(", ") || 'Network response was not ok');
-          }
-  
-          // Output the result
-          console.log(chalk.blue('Asset Information:'));
-          if (data.result && data.result[assetinf.toUpperCase()]) {
-            const assetData = data.result[assetinf.toUpperCase()];
-            console.log(chalk.yellow(JSON.stringify(assetData, null, 2))); // Display data nicely formatted
-          } else {
-            console.log(chalk.red('Asset not found.'));
-          }
-  
-          // Ask if user wants to get another asset info or go back to main menu
-          const { nextAction } = await inquirer.prompt([
-            {
-              type: 'list',
-              name: 'nextAction',
-              message: 'What would you like to do next?',
-              choices: [
-                { name: 'Get another asset info', value: 'getAgain' },
-                { name: 'Return to the main menu', value: 'mainMenu' }
-              ]
+          // Function to validate the asset string before sending it to the API
+          const validateAssetInput = (input) => {
+            const regex = /^[A-Za-z0-9]+$/;
+            if (!regex.test(input)) {
+              throw new Error('Invalid input: The asset name must be alphanumeric (letters and numbers only).');
             }
-          ]);
-  
+            return true;
+          };
+      
+          // Clear the console to remove previous outputs
+          clearConsole();
+      
+          // Ask the user for the asset type or name with inline validation
+          const assetinf = await input({
+            message: 'Please enter the asset type or name:',
+            validate: (input) => {
+              try {
+                validateAssetInput(input);
+                return true;
+              } catch (error) {
+                return error.message; // Return error message if validation fails
+              }
+            },
+          });
+      
+          // Log the input and start fetching data
+          console.log(chalk.blue(`Fetching asset info for: ${assetinf}`));
+      
+          // Fetch data from the API
+          const response = await fetch(`${apiweb}/public/Assets?asset=${assetinf}`);
+      
+          // Check if the response is okay (status 2xx)
+          if (!response.ok) {
+            throw new Error('Failed to fetch data from the server.');
+          }
+      
+          // Parse the response data
+          const data = await response.json();
+      
+          // Check if the API returned any errors
+          if (data.error && data.error.length > 0) {
+            console.log(chalk.red(`Error: ${data.error.join(', ')}. Invalid input, please try again.`));
+          } else if (Object.keys(data.result).length > 0) {
+            // Get the first asset in the result and display its details
+            const assetKey = Object.keys(data.result)[0];
+            const assetData = data.result[assetKey];
+      
+            // Display asset data in a formatted box
+            console.log(chalk.yellow('Asset Information:'));
+            console.log(chalk.green('----------------------------------------'));
+            console.log(chalk.green(`Asset Name:        ${assetData.altname}`));
+            console.log(chalk.green(`Asset Class:       ${assetData.aclass}`));
+            console.log(chalk.green(`Decimals:          ${assetData.decimals}`));
+            console.log(chalk.green(`Display Decimals:  ${assetData.display_decimals}`));
+            console.log(chalk.green(`Status:            ${assetData.status}`));
+            console.log(chalk.green('----------------------------------------'));
+          } else {
+            // If no asset data is found
+            console.log(chalk.red('No asset information found for the entered asset.'));
+          }
+      
+          // Ask what the user wants to do next
+          const nextAction = await select({
+            message: 'What would you like to do next?',
+            choices: [
+              { name: 'Get another asset info', value: 'getAgain' },
+              { name: 'Return to the main menu', value: 'mainMenu' }
+            ]
+          });
+      
+          // Handle the next action
           if (nextAction === 'getAgain') {
-            getAssetInfo(); // Call the function again to input another asset
+            await getAssetInfo(); // Call the function again
           } else {
             main(); // Return to the main menu
           }
-  
+      
         } catch (error) {
-          console.error(chalk.red('Invalid Input or Network Error:', error.message));
-          main();
+          // Handle any errors more gracefully
+          console.error(chalk.red('Error occurred while fetching asset info:'), error.message);
+      
+          // Ask the user whether they want to retry or go back to the main menu
+          const retry = await select({
+            message: 'Failed to fetch asset information. What would you like to do?',
+            choices: [
+              { name: 'Retry', value: 'retry' },
+              { name: 'Return to the main menu', value: 'mainMenu' }
+            ]
+          });
+      
+          // Retry or go back based on user's choice
+          if (retry === 'retry') {
+            await getAssetInfo(); // Retry fetching the asset info
+          } else {
+            main(); // Return to the main menu
+          }
         }
       }
-  
+
       getAssetInfo();
       break;
 
