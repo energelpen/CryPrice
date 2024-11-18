@@ -184,13 +184,35 @@ async function main() {
       getAssetInfo();
       break;
 
-    case 'asspinf':
-      console.log(chalk.green('You selected: Get Asset Pair Info'));
-      const assetpinf = await input({
-        message: 'Please enter the asset pair type or name:',
-      });
-      // Handle asset pair info logic here
-      break;
+      case 'asspinf':
+        console.log(chalk.green('You selected: Get Asset Pair Info'));
+      
+        async function getAssetInfo() {
+          try {
+            // Function to validate the asset string before sending it to the API
+            const validateAssetInput = (input) => {
+              // Updated regex to allow alphanumeric characters and slashes
+              const regex = /^[A-Za-z0-9/]+$/;
+              if (!regex.test(input)) {
+                throw new Error('Invalid input: The asset pair must be alphanumeric (letters, numbers, and forward slashes only).');
+              }
+              return true;
+            }; 
+        
+            // Clear the console to remove previous outputs
+            clearConsole();
+            
+          } catch (error) {
+            console.error(error.message);
+          }
+        }
+      
+        getAssetInfo(); // Don't forget to call the function if needed
+
+        const response = await fetch(`${apiweb}/public/Assets?asset=${assetinf}`);
+      
+        break; // Now properly part of the switch case
+      
 
     case 'ticinf':
       console.log(chalk.green('You selected: Get Ticker Info'));
